@@ -64,6 +64,7 @@ class TwilioPlugin(NotificationPlugin):
     version = sentry_twilio.VERSION
     description = 'A plugin for Sentry which sends SMS notifications via Twilio'
     resource_links = (
+        ('Documentation', 'https://github.com/mattrobenolt/sentry-twilio/blob/master/README.md'),
         ('Bug Tracker', 'https://github.com/mattrobenolt/sentry-twilio/issues'),
         ('Source', 'https://github.com/mattrobenolt/sentry-twilio'),
         ('Twilio', 'http://www.twilio.com/'),
