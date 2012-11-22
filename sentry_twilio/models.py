@@ -15,7 +15,7 @@ from sentry.plugins.bases.notify import NotificationPlugin
 
 import sentry_twilio
 
-phone_re = re.compile(r'^\+\d{11}$')  # US only :(
+phone_re = re.compile(r'^(\+1)?\d{10}$')  # US only :(
 split_re = re.compile(r'\s*,\s*|\s+')
 
 twilio_sms_endpoint = 'https://api.twilio.com/2010-04-01/Accounts/{0}/SMS/Messages.json'
@@ -27,15 +27,19 @@ class TwilioConfigurationForm(forms.Form):
     auth_token = forms.CharField(label=_('Auth Token'), required=True,
         widget=forms.PasswordInput(render_value=True, attrs={'class': 'span6'}))
     sms_from = forms.CharField(label=_('SMS From #'), required=True,
-        widget=forms.TextInput(attrs={'placeholder': 'e.g., +15555555555'}))
+        help_text=_('Digits only'),
+        widget=forms.TextInput(attrs={'placeholder': 'e.g. 5551234567'}))
     sms_to = forms.CharField(label=_('SMS To #s'), required=True,
         help_text=_('Recipient(s) phone numbers separated by commas or lines'),
-        widget=forms.Textarea)
+        widget=forms.Textarea(attrs={'placeholder': 'e.g. 5551234567, 5555555555'}))
 
     def clean_sms_from(self):
         data = self.cleaned_data['sms_from']
         if not phone_re.match(data):
             raise forms.ValidationError('{0} is not a valid phone number.'.format(data))
+        if not data.startswith('+1'):
+            # Append the +1 when saving
+            data = '+1' + data
         return data
 
     def clean_sms_to(self):
@@ -44,6 +48,9 @@ class TwilioConfigurationForm(forms.Form):
         for phone in phones:
             if not phone_re.match(phone):
                 raise forms.ValidationError('{0} is not a valid phone number.'.format(phone))
+
+        # Add a +1 to all numbers if they don't have it
+        phones = map(lambda x: x if x.startswith('+1') else '+1' + x, phones)
         return ','.join(phones)
 
     def clean(self):
