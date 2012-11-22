@@ -66,6 +66,7 @@ class TwilioPlugin(NotificationPlugin):
     resource_links = (
         ('Bug Tracker', 'https://github.com/mattrobenolt/sentry-twilio/issues'),
         ('Source', 'https://github.com/mattrobenolt/sentry-twilio'),
+        ('Twilio', 'http://www.twilio.com/'),
     )
 
     slug = 'twilio'
