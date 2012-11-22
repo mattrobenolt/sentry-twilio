@@ -108,4 +108,10 @@ class TwilioPlugin(NotificationPlugin):
                 'To': phone,
                 'Body': body,
             })
-            urllib2.urlopen(endpoint, data)
+            try:
+                urllib2.urlopen(endpoint, data)
+            except urllib2.URLError:
+                # This could happen for any number of reasons
+                # Twilio may have legitimately errored,
+                # Bad auth credentials, etc
+                pass
