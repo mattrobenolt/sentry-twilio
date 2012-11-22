@@ -57,8 +57,8 @@ class TwilioPlugin(NotificationPlugin):
     version = sentry_twilio.VERSION
     description = 'Twilio'
     resource_links = (
-        ('Bug Tracker', 'http://github.com/mattrobenolt/sentry-twilio/issues'),
-        ('Source', 'http://github.com/mattrobenolt/sentry-twilio'),
+        ('Bug Tracker', 'https://github.com/mattrobenolt/sentry-twilio/issues'),
+        ('Source', 'https://github.com/mattrobenolt/sentry-twilio'),
     )
 
     slug = 'twilio'
