@@ -70,6 +70,10 @@ class TwilioPlugin(NotificationPlugin):
     def is_configured(self, request, project, **kwargs):
         return all([self.get_option(o, project) for o in ('account_sid', 'auth_token', 'sms_from', 'sms_to')])
 
+    def get_send_to(self, *args, **kwargs):
+        # This doesn't depend on email permission... stuff.
+        return True
+
     def notify_users(self, group, event):
         project = group.project
 
