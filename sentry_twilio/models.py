@@ -28,10 +28,10 @@ class TwilioConfigurationForm(forms.Form):
         widget=forms.PasswordInput(render_value=True, attrs={'class': 'span6'}))
     sms_from = forms.CharField(label=_('SMS From #'), required=True,
         help_text=_('Digits only'),
-        widget=forms.TextInput(attrs={'placeholder': 'e.g. 5551234567'}))
+        widget=forms.TextInput(attrs={'placeholder': 'e.g. 3305093095'}))
     sms_to = forms.CharField(label=_('SMS To #s'), required=True,
         help_text=_('Recipient(s) phone numbers separated by commas or lines'),
-        widget=forms.Textarea(attrs={'placeholder': 'e.g. 5551234567, 5555555555'}))
+        widget=forms.Textarea(attrs={'placeholder': 'e.g. 3305093095, 5555555555'}))
 
     def clean_sms_from(self):
         data = self.cleaned_data['sms_from']
