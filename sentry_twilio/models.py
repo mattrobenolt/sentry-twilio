@@ -77,7 +77,7 @@ class TwilioPlugin(NotificationPlugin):
     def notify_users(self, group, event):
         project = group.project
 
-        body = '[{0}] {1}: {2}'.format(
+        body = 'Sentry [{0}] {1}: {2}'.format(
             project.name.encode('utf-8'),
             event.get_level_display().upper().encode('utf-8'),
             event.error().encode('utf-8').splitlines()[0]
