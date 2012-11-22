@@ -3,7 +3,7 @@
 sentry-twilio
 =============
 
-An extension for Sentry which integrates with Twilio.
+A plugin for Sentry which sends SMS notifications via Twilio.
 
 :copyright: (c) 2012 by Matt Robenolt
 :license: BSD, see LICENSE for more details.
@@ -21,7 +21,7 @@ setup(
     author='Matt Robenolt',
     author_email='matt@ydekproductons.com',
     url='https://github.com/mattrobenolt/sentry-twilio',
-    description='A Sentry extension which integrates with Twilio',
+    description='A plugin for Sentry which sends SMS notifications via Twilio',
     long_description=__doc__,
     license='BSD',
     packages=find_packages(exclude=['tests']),
