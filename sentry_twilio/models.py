@@ -83,7 +83,7 @@ class TwilioPlugin(NotificationPlugin):
         # This doesn't depend on email permission... stuff.
         return True
 
-    def notify_users(self, group, event):
+    def notify_users(self, group, event, **kwargs):
         project = group.project
 
         body = 'Sentry [{0}] {1}: {2}'.format(
