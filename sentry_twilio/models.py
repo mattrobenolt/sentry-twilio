@@ -9,16 +9,37 @@ sentry_twilio.models
 import re
 import urllib
 import urllib2
+import phonenumbers
 from django import forms
 from django.utils.translation import ugettext_lazy as _
 from sentry.plugins.bases.notify import NotificationPlugin
 
 import sentry_twilio
 
-phone_re = re.compile(r'^(\+(9[976]\d|8[987530]\d|6[987]\d|5[90]\d|42\d|3[875]\d|2[98654321]\d|9[8543210]|8[6421]|6[6543210]|5[87654321]|4[987654310]|3[9643210]|2[70]|7|1))?\d{1,14}$')
 split_re = re.compile(r'\s*,\s*|\s+')
+DEFAULT_REGION = 'US'
 
 twilio_sms_endpoint = 'https://api.twilio.com/2010-04-01/Accounts/{0}/SMS/Messages.json'
+
+
+def validate_phone(phone):
+    try:
+        p = phonenumbers.parse(phone, DEFAULT_REGION)
+    except phonenumbers.NumberParseException:
+        return False
+    if not phonenumbers.is_possible_number(p):
+        return False
+    if not phonenumbers.is_valid_number(p):
+        return False
+    return True
+
+
+def clean_phone(phone):
+    # This could raise, but should have been checked with validate_phone first
+    return phonenumbers.format_number(
+        phonenumbers.parse(phone, DEFAULT_REGION),
+        phonenumbers.PhoneNumberFormat.E164,
+    )
 
 
 class TwilioConfigurationForm(forms.Form):
@@ -35,23 +56,17 @@ class TwilioConfigurationForm(forms.Form):
 
     def clean_sms_from(self):
         data = self.cleaned_data['sms_from']
-        if not phone_re.match(data):
+        if not validate_phone(phone):
             raise forms.ValidationError('{0} is not a valid phone number.'.format(data))
-        if not data.startswith('+1'):
-            # Append the +1 when saving
-            data = '+1' + data
-        return data
+        return clean_phone(data)
 
     def clean_sms_to(self):
         data = self.cleaned_data['sms_to']
         phones = set(filter(bool, split_re.split(data)))
         for phone in phones:
-            if not phone_re.match(phone):
+            if not validate_phone(phone):
                 raise forms.ValidationError('{0} is not a valid phone number.'.format(phone))
-
-        # Add a +1 to all numbers if they don't have it
-        phones = map(lambda x: x if x.startswith('+1') else '+1' + x, phones)
-        return ','.join(phones)
+        return ','.join(sorted(map(clean_phone, phones)))
 
     def clean(self):
         # TODO: Ping Twilio and check credentials (?)
