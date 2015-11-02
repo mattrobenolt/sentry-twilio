@@ -56,7 +56,7 @@ class TwilioConfigurationForm(forms.Form):
 
     def clean_sms_from(self):
         data = self.cleaned_data['sms_from']
-        if not validate_phone(phone):
+        if not validate_phone(data):
             raise forms.ValidationError('{0} is not a valid phone number.'.format(data))
         return clean_phone(data)
 
