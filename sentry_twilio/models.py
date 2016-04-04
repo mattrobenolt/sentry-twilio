@@ -2,22 +2,23 @@
 sentry_twilio.models
 ~~~~~~~~~~~~~~~~~~~~
 
-:copyright: (c) 2012 by Matt Robenolt.
+:copyright: (c) 2016 by Matt Robenolt.
 :license: BSD, see LICENSE for more details.
 """
 
 import re
-import urllib
-import urllib2
 import phonenumbers
+
 from django import forms
 from django.utils.translation import ugettext_lazy as _
+
+from sentry import http
 from sentry.plugins.bases.notify import NotificationPlugin
 
 import sentry_twilio
 
-split_re = re.compile(r'\s*,\s*|\s+')
 DEFAULT_REGION = 'US'
+MAX_SMS_LENGTH = 160
 
 twilio_sms_endpoint = 'https://api.twilio.com/2010-04-01/Accounts/{0}/SMS/Messages.json'
 
@@ -42,6 +43,10 @@ def clean_phone(phone):
     )
 
 
+def basic_auth(user, password):
+    return 'Basic ' + (user + ':' + password).encode('base64').replace('\n', '')
+
+
 class TwilioConfigurationForm(forms.Form):
     account_sid = forms.CharField(label=_('Account SID'), required=True,
         widget=forms.TextInput(attrs={'class': 'span6'}))
@@ -62,7 +67,9 @@ class TwilioConfigurationForm(forms.Form):
 
     def clean_sms_to(self):
         data = self.cleaned_data['sms_to']
-        phones = set(filter(bool, split_re.split(data)))
+        phones = set(filter(bool, re.split(r'\s*,\s*|\s+', data)))
+        if len(phones) > 10:
+            raise forms.ValidationError('Max of 10 phone numbers, {0} were given.'.format(len(phones)))
         for phone in phones:
             if not validate_phone(phone):
                 raise forms.ValidationError('{0} is not a valid phone number.'.format(phone))
@@ -82,7 +89,7 @@ class TwilioPlugin(NotificationPlugin):
         ('Documentation', 'https://github.com/mattrobenolt/sentry-twilio/blob/master/README.md'),
         ('Bug Tracker', 'https://github.com/mattrobenolt/sentry-twilio/issues'),
         ('Source', 'https://github.com/mattrobenolt/sentry-twilio'),
-        ('Twilio', 'http://www.twilio.com/'),
+        ('Twilio', 'https://www.twilio.com/'),
     )
 
     slug = 'twilio'
@@ -92,7 +99,8 @@ class TwilioPlugin(NotificationPlugin):
     project_conf_form = TwilioConfigurationForm
 
     def is_configured(self, project, **kwargs):
-        return all([self.get_option(o, project) for o in ('account_sid', 'auth_token', 'sms_from', 'sms_to')])
+        return all([self.get_option(o, project) for o in (
+            'account_sid', 'auth_token', 'sms_from', 'sms_to')])
 
     def get_send_to(self, *args, **kwargs):
         # This doesn't depend on email permission... stuff.
@@ -106,7 +114,7 @@ class TwilioPlugin(NotificationPlugin):
             event.get_level_display().upper().encode('utf-8'),
             event.error().encode('utf-8').splitlines()[0]
         )
-        body = body[:160]  # Truncate to 160 characters
+        body = body[:MAX_SMS_LENGTH]
 
         account_sid = self.get_option('account_sid', project)
         auth_token = self.get_option('auth_token', project)
@@ -114,28 +122,30 @@ class TwilioPlugin(NotificationPlugin):
         sms_to = self.get_option('sms_to', project).split(',')
         endpoint = twilio_sms_endpoint.format(account_sid)
 
-        # Herein lies the goat rodeo that is urllib2
+        headers = {
+            'Authorization': basic_auth(account_sid, auth_token),
+        }
 
-        # Sure, totally makes sense. PasswordMgrWithDefault..fuck
-        manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
-        manager.add_password(None, endpoint, account_sid, auth_token)
-        # Obviously, you need an AuthHandler thing
-        handler = urllib2.HTTPBasicAuthHandler(manager)
-        # Build that fucking opener
-        opener = urllib2.build_opener(handler)
-        # Install that shit, hardcore
-        urllib2.install_opener(opener)
+        errors = []
 
         for phone in sms_to:
-            data = urllib.urlencode({
-                'From': sms_from,
-                'To': phone,
-                'Body': body,
-            })
             try:
-                urllib2.urlopen(endpoint, data)
-            except urllib2.URLError:
-                # This could happen for any number of reasons
-                # Twilio may have legitimately errored,
-                # Bad auth credentials, etc
-                pass
+                http.safe_urlopen(
+                    endpoint,
+                    method='POST',
+                    headers=headers,
+                    data={
+                        'From': sms_from,
+                        'To': phone,
+                        'Body': body,
+                    },
+                ).raise_for_status()
+            except Exception as e:
+                errors.append(e)
+
+        if errors:
+            if len(errors) == 1:
+                raise errors[0]
+
+            # TODO: multi-exception
+            raise Exception(errors)

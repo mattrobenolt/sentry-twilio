@@ -12,7 +12,7 @@ from setuptools import setup, find_packages
 
 
 install_requires = [
-    'sentry>=5.0.0',
+    'sentry>=7.0.0',
 
     # We don't need full `phonenumbers` library
     'phonenumberslite<8.0',
