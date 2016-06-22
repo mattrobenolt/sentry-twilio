@@ -119,8 +119,12 @@ class TwilioPlugin(NotificationPlugin):
         account_sid = self.get_option('account_sid', project)
         auth_token = self.get_option('auth_token', project)
         sms_from = self.get_option('sms_from', project)
-        sms_to = self.get_option('sms_to', project).split(',')
         endpoint = twilio_sms_endpoint.format(account_sid)
+
+        sms_to = self.get_option('sms_to', project)
+        if not sms_to:
+            return
+        sms_to = sms_to.split(',')
 
         headers = {
             'Authorization': basic_auth(account_sid, auth_token),
@@ -129,6 +133,8 @@ class TwilioPlugin(NotificationPlugin):
         errors = []
 
         for phone in sms_to:
+            if not phone:
+                continue
             try:
                 http.safe_urlopen(
                     endpoint,
