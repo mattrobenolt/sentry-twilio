@@ -47,6 +47,10 @@ def basic_auth(user, password):
     return 'Basic ' + (user + ':' + password).encode('base64').replace('\n', '')
 
 
+def split_sms_to(data):
+    return set(filter(bool, re.split(r'\s*,\s*|\s+', data)))
+
+
 class TwilioConfigurationForm(forms.Form):
     account_sid = forms.CharField(label=_('Account SID'), required=True,
         widget=forms.TextInput(attrs={'class': 'span6'}))
@@ -67,7 +71,7 @@ class TwilioConfigurationForm(forms.Form):
 
     def clean_sms_to(self):
         data = self.cleaned_data['sms_to']
-        phones = set(filter(bool, re.split(r'\s*,\s*|\s+', data)))
+        phones = split_sms_to(data)
         if len(phones) > 10:
             raise forms.ValidationError('Max of 10 phone numbers, {0} were given.'.format(len(phones)))
         for phone in phones:
@@ -118,13 +122,13 @@ class TwilioPlugin(NotificationPlugin):
 
         account_sid = self.get_option('account_sid', project)
         auth_token = self.get_option('auth_token', project)
-        sms_from = self.get_option('sms_from', project)
+        sms_from = clean_phone(self.get_option('sms_from', project))
         endpoint = twilio_sms_endpoint.format(account_sid)
 
         sms_to = self.get_option('sms_to', project)
         if not sms_to:
             return
-        sms_to = sms_to.split(',')
+        sms_to = split_sms_to(sms_to)
 
         headers = {
             'Authorization': basic_auth(account_sid, auth_token),
@@ -136,6 +140,7 @@ class TwilioPlugin(NotificationPlugin):
             if not phone:
                 continue
             try:
+                phone = clean_phone(phone)
                 http.safe_urlopen(
                     endpoint,
                     method='POST',
